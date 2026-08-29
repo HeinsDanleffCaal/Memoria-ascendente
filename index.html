@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memoria Ascendente</title>
+
+  <!--
+    Fuentes de Google Fonts:
+    - Big Shoulders Display: el título grande y condensado (MEMORIA ASCENDENTE)
+    - Work Sans: el texto normal (instrucciones, botones)
+    - IBM Plex Mono: los números y las etiquetas tipo "consola" (monoespaciada,
+      para que las cifras siempre midan lo mismo: font-variant-numeric: tabular-nums)
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Todo el CSS del juego vive en su propio archivo -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       ESTRUCTURA GENERAL
+       .stage  -> centra el tablero en la pantalla
+       .board  -> el "panel" con encabezado + las 3 pantallas del juego
+       Dentro del board hay 3 <section class="screen">, pero solo UNA
+       está visible a la vez (las otras llevan el atributo "hidden").
+       El JavaScript decide cuál mostrar con showScreen().
+     ============================================================ -->
+  <div class="stage">
+    <div class="board">
+
+      <!-- Encabezado: nombre del jugador, nivel y puntos -->
+      <header class="board-header">
+        <div class="brand">MEMORIA <span>ASCENDENTE</span></div>
+        <div class="status-line">
+          <span class="status-item">Jugador<b id="hdrName">—</b></span>
+          <span class="status-item">Nivel<b id="hdrLevel">00</b></span>
+          <span class="status-item">Puntos<b id="hdrScore">0000</b></span>
+        </div>
+      </header>
+
+      <!-- Barra de tiempo: se ve solo durante la fase de memorización -->
+      <div class="timerbar" id="timerbar" hidden>
+        <div class="timerbar-fill" id="timerFill"></div>
+      </div>
+
+      <!-- PANTALLA 1: Bienvenida / formulario de nombre -->
+      <section class="screen" id="screen-intro">
+        <p class="eyebrow">Juego de memoria numérica</p>
+        <h1 class="title">Memorízalos.<br>Ordénalos.</h1>
+        <p class="lede">Un grupo de burbujas numeradas aparece un instante. Cuando se oculten, tócalas en el mismo orden en que estaban: de la más pequeña a la más grande. Cada acierto revela su número; un solo error termina la partida.</p>
+
+        <div class="field">
+          <label for="nameInput">Tu nombre</label>
+          <input id="nameInput" type="text" placeholder="¿Cómo te llamas?" maxlength="20" autocomplete="off">
+          <p class="field-error" id="nameError"></p>
+        </div>
+
+        <button class="btn" id="startBtn">Comenzar</button>
+
+        <div class="rules">
+          <div><div class="k">Nivel 1</div><div class="v">4 números</div></div>
+          <div><div class="k">Cada nivel</div><div class="v">+1 número</div></div>
+          <div><div class="k">Tiempo</div><div class="v">se acorta</div></div>
+        </div>
+      </section>
+
+      <!-- PANTALLA 2: El juego en sí (aquí se inyectan las burbujas) -->
+      <section class="screen" id="screen-game" hidden>
+        <div class="phase-row">
+          <p class="phase-label" id="phaseLabel">Memoriza el orden</p>
+          <span class="phase-count" id="phaseCount"></span>
+        </div>
+
+        <!-- Este div empieza vacío: renderGrid() en script.js crea aquí
+             un <button class="tile"> por cada número, en una posición
+             aleatoria (ver scatterLayout() en js/script.js). -->
+        <div class="grid" id="grid"></div>
+
+        <p class="toast" id="toast"></p>
+      </section>
+
+      <!-- PANTALLA 3: Resumen al terminar la partida -->
+      <section class="screen" id="screen-over" hidden>
+        <p class="eyebrow" id="overEyebrow">Fin de la partida</p>
+        <h1 class="title" id="overTitle">Casi lo tenías.</h1>
+        <div class="over-stats">
+          <div><div class="k">Nivel alcanzado</div><div class="v" id="overLevel">1</div></div>
+          <div><div class="k">Puntos</div><div class="v" id="overScore">0</div></div>
+        </div>
+        <p class="best-line" id="bestLine"></p>
+        <button class="btn" id="retryBtn">Jugar de nuevo</button>
+      </section>
+
+    </div>
+
+    <p class="board-caption">Toca las burbujas en el mismo orden en que aparecieron: de menor a mayor. Cada acierto revela su número.</p>
+  </div>
+
+  <!-- Todo el JavaScript del juego. Se carga al final del body para
+       asegurarnos de que el HTML de arriba ya existe cuando el script
+       intenta buscar los elementos con document.getElementById(). -->
+  <script src="js/script.js"></script>
+</body>
+</html>

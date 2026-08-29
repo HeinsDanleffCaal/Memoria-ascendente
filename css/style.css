@@ -1,0 +1,596 @@
+/* ============================================================
+   1. DESIGN TOKENS (variables CSS)
+   ------------------------------------------------------------
+   En vez de escribir colores sueltos por todo el archivo, se
+   declaran una sola vez aquí como variables (--nombre) y luego
+   se reutilizan con var(--nombre). Así, cambiar el color de
+   acento del juego es editar UNA línea, no perseguirlo por todo
+   el CSS.
+   ============================================================ */
+:root{
+  --bg:#0A0E14;              /* fondo general de la página */
+  --panel:#12171F;           /* fondo del panel (más claro) */
+  --panel-2:#171D27;         /* fondo del panel (más claro aún, para el degradado) */
+  --border:#262E3B;          /* bordes normales */
+  --border-soft:#1D2430;     /* bordes muy sutiles (líneas divisorias) */
+  --text:#E7ECF2;            /* texto principal */
+  --text-muted:#8993A6;      /* texto secundario */
+  --text-faint:#586074;      /* texto terciario / deshabilitado */
+  --accent:#FFB020;          /* color de acento (ámbar) */
+  --accent-2:#FFD27A;        /* acento más claro, para contraste en textos */
+  --accent-dim:#4A3A1E;      /* acento apagado, para fondos */
+  --success:#4ADE80;         /* verde: acierto */
+  --success-dim:#173424;
+  --danger:#FF6B6B;          /* rojo: error */
+  --danger-dim:#3A1D20;
+  --tile-bg:#1B222D;         /* color base de las burbujas */
+  --tile-bg-hover:#212A38;
+
+  --font-display:'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-body:'Work Sans', system-ui, sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+/* box-sizing:border-box en TODO el documento: el padding y el borde
+   se cuentan DENTRO del ancho/alto declarado, en vez de sumarse.
+   Es el ajuste clásico que evita sorpresas de layout. */
+*{ box-sizing:border-box; }
+
+html, body{ margin:0; padding:0; }
+
+/* ============================================================
+   2. FONDO DE LA PÁGINA
+   ------------------------------------------------------------
+   Dos degradados radiales superpuestos (uno arriba, otro abajo)
+   sobre un color sólido, para dar sensación de profundidad sin
+   usar ninguna imagen. body::before añade además una textura de
+   líneas horizontales casi invisible (estilo pantalla CRT).
+   ============================================================ */
+body{
+  background:
+    radial-gradient(ellipse 900px 600px at 50% -10%, #1A2230 0%, transparent 60%),
+    radial-gradient(ellipse 1200px 900px at 50% 110%, #0D1219 0%, transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:32px 16px;
+  position:relative;
+  overflow-x:hidden;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.018) 0px,
+    rgba(255,255,255,0.018) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode:overlay;
+  z-index:0;
+}
+
+/* ============================================================
+   3. CONTENEDORES PRINCIPALES (.stage / .board)
+   ============================================================ */
+.stage{
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:640px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.board{
+  background:linear-gradient(180deg, var(--panel-2), var(--panel));
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 30px 70px -25px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.03);
+  padding:22px 22px 28px;
+  position:relative;
+  overflow:hidden;
+}
+
+.board::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, rgba(255,255,255,.05), transparent 30%);
+  pointer-events:none;
+}
+
+/* ============================================================
+   4. ENCABEZADO (nombre / nivel / puntos)
+   ============================================================ */
+.board-header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  border-bottom:1px solid var(--border-soft);
+  padding-bottom:14px;
+  margin-bottom:16px;
+}
+
+.brand{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:clamp(22px, 5vw, 30px); /* nunca baja de 22px ni sube de 30px */
+  letter-spacing:0.02em;
+  color:var(--text);
+  line-height:1;
+  text-wrap:balance;
+}
+
+.brand span{ color:var(--accent); }
+
+.status-line{
+  display:flex;
+  gap:16px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  color:var(--text-muted);
+  text-transform:uppercase;
+}
+
+.status-item b{
+  display:block;
+  font-size:15px;
+  color:var(--accent-2);
+  font-weight:600;
+  font-variant-numeric:tabular-nums; /* los dígitos ocupan siempre el mismo ancho */
+  letter-spacing:0.02em;
+}
+
+/* Barra de tiempo: timerbar-fill se encoge de scaleX(1) a scaleX(0)
+   con una transición CSS que dispara script.js (ver startMemorizePhase). */
+.timerbar{
+  height:3px;
+  background:var(--border-soft);
+  border-radius:3px;
+  overflow:hidden;
+  margin-bottom:18px;
+}
+
+.timerbar-fill{
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transform-origin:left;
+  transition:transform linear; /* la duración se fija desde JS (seconds + 's') */
+}
+
+/* ============================================================
+   5. PANTALLAS (.screen) Y TEXTOS COMUNES
+   ============================================================ */
+.screen{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  animation:fadeIn .4s ease both;
+}
+
+@keyframes fadeIn{
+  from{ opacity:0; transform:translateY(4px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.14em;
+  color:var(--text-faint);
+  text-transform:uppercase;
+}
+
+h1.title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:clamp(28px, 7vw, 40px);
+  line-height:1.02;
+  margin:2px 0 0;
+  text-wrap:balance;
+  color:var(--text);
+}
+
+.lede{
+  color:var(--text-muted);
+  font-size:15px;
+  line-height:1.55;
+  max-width:52ch;
+}
+
+/* ---- Formulario del nombre ---- */
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:4px;
+}
+
+.field label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+
+.field input{
+  background:var(--tile-bg);
+  border:1px solid var(--border);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:17px;
+  padding:13px 14px;
+  border-radius:10px;
+  outline:none;
+  transition:border-color .15s, background .15s;
+}
+
+.field input::placeholder{ color:var(--text-faint); }
+
+.field input:focus-visible{
+  border-color:var(--accent);
+  background:var(--tile-bg-hover);
+}
+
+.field-error{
+  font-size:12.5px;
+  color:var(--danger);
+  min-height:16px; /* reserva espacio para que el botón no "salte" al mostrar el error */
+}
+
+/* ---- Botones ---- */
+.btn{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:15.5px;
+  color:#12171F;
+  background:linear-gradient(180deg, var(--accent-2), var(--accent));
+  border:none;
+  border-radius:10px;
+  padding:13px 20px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition:transform .12s ease, filter .12s ease;
+  align-self:flex-start;
+}
+
+.btn:hover{ filter:brightness(1.06); }
+.btn:active{ transform:scale(.98); }
+.btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:3px; }
+
+/* ---- Tarjetas de reglas en la pantalla de inicio ---- */
+.rules{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
+  gap:10px;
+  margin-top:6px;
+}
+
+.rules div{
+  background:var(--panel);
+  border:1px solid var(--border-soft);
+  border-radius:10px;
+  padding:10px 12px;
+}
+
+.rules .k{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  letter-spacing:0.08em;
+  color:var(--text-faint);
+  text-transform:uppercase;
+}
+.rules .v{
+  font-family:var(--font-mono);
+  font-size:14px;
+  color:var(--accent-2);
+  margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---- Fila "Memoriza el orden ⋯ 4 números" ---- */
+.phase-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.phase-label{
+  font-family:var(--font-mono);
+  font-size:12px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--accent-2);
+  margin:0;
+}
+
+.phase-count{
+  font-family:var(--font-mono);
+  font-size:12px;
+  color:var(--text-faint);
+  font-variant-numeric:tabular-nums;
+}
+
+/* ============================================================
+   6. EL "ESTANQUE" DE BURBUJAS (.grid)
+   ------------------------------------------------------------
+   Ojo: la clase se llama ".grid" mas NO usa CSS Grid. Es un
+   contenedor con position:relative y una proporción fija
+   (aspect-ratio) donde cada burbuja se posiciona con position:
+   absolute + left/top en PORCENTAJE (ver scatterLayout() en
+   script.js). El valor 1.7 debe coincidir con la constante
+   POND_RATIO del JavaScript: si cambias uno, cambia el otro.
+   ============================================================ */
+.grid{
+  position:relative;
+  width:100%;
+  aspect-ratio:1.7 / 1;
+}
+
+/* ---- Animaciones reutilizadas por las burbujas ---- */
+
+/* Brillo que titila suavemente en la burbuja oculta (efecto vidrio) */
+@keyframes bubbleGleam{
+  0%, 100%{ opacity:.55; }
+  50%{ opacity:1; }
+}
+
+/* "Pop" al acertar: un pequeño rebote de escala */
+@keyframes bubblePop{
+  0%{ transform:rotateY(180deg) scale(1); }
+  45%{ transform:rotateY(180deg) scale(1.22); }
+  100%{ transform:rotateY(180deg) scale(1); }
+}
+
+/* Aparición inicial de cada burbuja al empezar el nivel */
+@keyframes bubbleDrop{
+  from{ opacity:0; transform:scale(.4); }
+  to{ opacity:1; transform:scale(1); }
+}
+
+/* ============================================================
+   7. LA BURBUJA (.tile) — TÉCNICA DE "TARJETA VOLTEABLE" 3D
+   ------------------------------------------------------------
+   Cada burbuja son en realidad TRES capas apiladas:
+     .tile        -> el <button>, posicionado en el estanque
+       .tile-inner  -> el que rota en 3D (rotateY)
+         .tile-face.tile-front -> la cara con el número
+         .tile-face.tile-back  -> la cara "vacía" (oculta)
+   Both faces are absolutely positioned on top of each other.
+   backface-visibility:hidden hace que una cara desaparezca
+   cuando queda "de espaldas" al usuario tras la rotación.
+   Cuando la burbuja lleva la clase .is-hidden, .tile-inner
+   rota 180°, así que se ve tile-back en vez de tile-front.
+   ============================================================ */
+.tile{
+  position:absolute; /* la posición real (left/top) la fija script.js */
+  background:none;
+  border:none;
+  padding:0;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  perspective:700px; /* le da profundidad 3D al giro de .tile-inner */
+  animation:bubbleDrop .35s cubic-bezier(.3,1.4,.6,1) both;
+  animation-delay:var(--drop-delay, 0s); /* cada burbuja aparece con un pequeño retraso */
+}
+
+.tile:disabled{ cursor:default; }
+
+.tile-inner{
+  display:block; /* IMPORTANTE: es un <span>, que por defecto es "inline" y
+                     ignoraría width/height sin este display:block */
+  position:relative;
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  transform-style:preserve-3d; /* permite que sus hijos vivan en el mismo espacio 3D */
+  transition:transform .5s cubic-bezier(.5,.1,.2,1);
+}
+
+.tile.is-hidden .tile-inner{ transform:rotateY(180deg); }
+
+.tile-face{
+  position:absolute;
+  inset:0; /* atajo de top/right/bottom/left:0 */
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  backface-visibility:hidden; /* la clave del efecto "flip card" */
+  font-family:var(--font-mono);
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(11px, 3.4vw, 19px);
+  border:1px solid var(--border);
+}
+
+/* Cara frontal: el número, sobre un fondo tipo "vidrio esmerilado"
+   (dos radial-gradient para simular brillo arriba-izquierda y
+   sombra abajo-derecha, como una esfera real) */
+.tile-front{
+  color:var(--text);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.22), rgba(255,255,255,0) 45%),
+    radial-gradient(circle at 72% 80%, rgba(0,0,0,.28), transparent 55%),
+    var(--tile-bg);
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,.08),
+    inset 0 -7px 11px rgba(0,0,0,.35),
+    0 6px 14px -9px rgba(0,0,0,.6);
+}
+
+/* Cara trasera: la burbuja "cerrada". Empieza rotada 180° para que,
+   al combinarse con la rotación de .tile-inner, quede mirando al
+   usuario justo cuando .tile-front queda de espaldas. */
+.tile-back{
+  transform:rotateY(180deg);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,.3), rgba(255,255,255,0) 42%),
+    radial-gradient(circle at 74% 82%, rgba(0,0,0,.32), transparent 55%),
+    linear-gradient(160deg, var(--tile-bg), var(--panel));
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,.1),
+    inset 0 -7px 11px rgba(0,0,0,.4),
+    0 6px 14px -9px rgba(0,0,0,.6);
+}
+
+/* El pequeño reflejo ovalado que le da aspecto de burbuja de jabón */
+.tile-back::after{
+  content:"";
+  position:absolute;
+  width:24%;
+  height:12%;
+  top:20%;
+  left:22%;
+  background:rgba(255,255,255,.4);
+  border-radius:50%;
+  filter:blur(1.5px);
+  transform:rotate(-25deg);
+  pointer-events:none;
+  animation:bubbleGleam 3.2s ease-in-out infinite;
+  animation-delay:var(--float-delay, 0s);
+}
+
+.tile:not(:disabled):hover .tile-face{ filter:brightness(1.08); }
+
+/* ---- Estados del juego: acierto / error / burbuja no tocada ---- */
+
+.tile.is-correct .tile-back{
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,.32), rgba(255,255,255,0) 42%),
+    var(--success-dim);
+  border-color:var(--success);
+  box-shadow:0 0 0 3px rgba(74,222,128,.16), inset 0 2px 3px rgba(255,255,255,.12), inset 0 -7px 11px rgba(0,0,0,.35);
+  animation:bubblePop .4s ease;
+}
+
+.tile.is-correct .tile-back::before{
+  content:"✓";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(11px, 3.4vw, 19px);
+  color:var(--success);
+  z-index:1;
+}
+
+.tile.is-correct .tile-front{
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.2), rgba(255,255,255,0) 45%),
+    var(--success-dim);
+  border-color:var(--success);
+  color:var(--success);
+}
+
+.tile.is-wrong .tile-front{
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.2), rgba(255,255,255,0) 45%),
+    var(--danger-dim);
+  border-color:var(--danger);
+  color:var(--danger);
+}
+
+.tile.is-missed .tile-front{
+  color:var(--text-faint);
+  opacity:.7;
+}
+
+.toast{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  letter-spacing:0.06em;
+  color:var(--accent-2);
+  text-align:center;
+  min-height:16px;
+}
+
+/* ============================================================
+   8. PANTALLA DE FIN DE PARTIDA
+   ============================================================ */
+.over-stats{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin-top:4px;
+}
+
+.over-stats div{
+  background:var(--panel);
+  border:1px solid var(--border-soft);
+  border-radius:10px;
+  padding:14px;
+}
+
+.over-stats .k{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  letter-spacing:0.08em;
+  color:var(--text-faint);
+  text-transform:uppercase;
+}
+
+.over-stats .v{
+  font-family:var(--font-display);
+  font-size:28px;
+  font-weight:700;
+  color:var(--accent-2);
+  margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+
+.best-line{
+  font-size:13.5px;
+  color:var(--text-muted);
+}
+
+.best-line b{ color:var(--text); }
+
+.board-caption{
+  text-align:center;
+  font-size:12.5px;
+  color:var(--text-faint);
+  margin:0;
+}
+
+/* [hidden] con !important asegura que gane siempre, aunque otra
+   regla más específica intente ponerle display:flex, por ejemplo. */
+[hidden]{ display:none !important; }
+
+/* ============================================================
+   9. ACCESIBILIDAD: prefers-reduced-motion
+   ------------------------------------------------------------
+   Si la persona activó "reducir movimiento" en su sistema
+   operativo, apagamos las animaciones y transiciones que no son
+   esenciales para entender el juego.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce){
+  .tile-inner{ transition:none; }
+  .tile-back::after{ animation:none; }
+  .tile.is-correct .tile-back{ animation:none; }
+  .tile{ animation:none; }
+  .timerbar-fill{ transition:none; }
+  .screen{ animation:none; }
+}
